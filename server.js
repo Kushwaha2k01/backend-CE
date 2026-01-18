@@ -32,6 +32,11 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/applications', applicationRoutes);
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ message: 'CodeKnight Esports Backend API is running', version: '1.0.0' });
+});
+
 // Check environment
 if (!process.env.MONGO_URI) {
   console.warn('Warning: MONGO_URI not set. Ensure you set MONGO_URI in your .env or environment.');
