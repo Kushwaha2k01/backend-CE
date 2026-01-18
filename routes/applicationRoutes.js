@@ -3,17 +3,25 @@ const router = express.Router();
 const Application = require('../models/Application');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const { check, validationResult } = require('express-validator');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure multer for file uploads to Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'codeknight-resumes',
+    resource_type: 'auto',
+    allowed_formats: ['pdf', 'doc', 'docx'],
   },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
 });
 
 const fileFilter = (req, file, cb) => {
@@ -40,10 +48,6 @@ router.post('/', upload.single('resume'), [
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    // remove uploaded file if present
-    if (req.file && req.file.path) {
-      try { fs.unlinkSync(req.file.path); } catch (e) { /* ignore */ }
-    }
     return res.status(422).json({ errors: errors.array() });
   }
 
@@ -62,12 +66,12 @@ router.post('/', upload.single('resume'), [
       jobLocation,
       location,
       language,
-      resume: req.file ? req.file.path : null,
+      resume: req.file ? req.file.secure_url : null,
       portfolio,
     });
 
     await newApplication.save();
-    res.status(201).json({ message: 'Application submitted successfully' });
+    res.status(201).json({ message: 'Application submitted successfully', fileUrl: req.file ? req.file.secure_url : null });
   } catch (err) {
     res.status(500).json({ message: 'Internal server error' });
   }
